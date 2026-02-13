@@ -25,12 +25,12 @@ const SheetDetails = ({ dane }: { dane: any }) => {
         <TooltipContent>Szczegóły maszyny</TooltipContent>
       </Tooltip>
 
-      <SheetContent side="bottom" className="h-[60vh]">
+      <SheetContent side="bottom" className="h-auto max-h-[88vh]">
         <SheetHeader>
-          <SheetTitle>Szczegóły maszyny - Holzma</SheetTitle>
+          <SheetTitle>Szczegóły maszyny</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 overflow-y-auto">
+        <div className="mt-2 flex-1 overflow-y-auto px-4 pb-4">
           <MachineDetailsCard dane={dane ?? {}} />
         </div>
       </SheetContent>

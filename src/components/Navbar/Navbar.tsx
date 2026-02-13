@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import SheetDetails from "../MachineDetails/SheetDetails";
 import { useState } from "react";
 import AIChatPanel from "../Assistent AI/AssistentAI";
+import RaportDrawer from "../RaportForm/RaportDrawer";
 
 type NavbarDBProps = {
   dane?: any;
@@ -18,11 +19,13 @@ type NavbarDBProps = {
 
 export default function NavbarDB({ dane, onRefresh }: NavbarDBProps) {
   const [aiOpen, setAiOpen] = useState(false);
+  const machineName =
+    dane?.nazwaMaszyny ?? dane?.nazwa_maszyny ?? dane?.maszyna ?? "Holzma";
 
   return (
     <>
       <header className="fixed top-0 left-0 w-full z-50 h-16 bg-white shadow-md flex items-center justify-between px-6">
-        <div className="text-lg font-semibold">Dashboard</div>
+        <div className="text-lg font-semibold">{machineName}</div>
 
         <TooltipProvider>
           <div className="flex items-center gap-2">
@@ -37,6 +40,7 @@ export default function NavbarDB({ dane, onRefresh }: NavbarDBProps) {
             </Tooltip>
             {/* Szczegóły */}
             <SheetDetails dane={dane} />
+            <RaportDrawer />
 
             <Tooltip>
               <TooltipTrigger asChild>

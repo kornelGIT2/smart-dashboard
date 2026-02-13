@@ -7,9 +7,17 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, Activity } from "lucide-react";
-import { Wrench } from "lucide-react";
-import { Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Activity,
+  ArrowDown,
+  ArrowUp,
+  Clock3,
+  Pause,
+  Settings,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 
 type MachineDetailsProps = {
   dane?: Partial<{
@@ -34,102 +42,128 @@ type MachineDetailsProps = {
 };
 
 const getStatusColor = (value?: number, cel?: number) => {
-  if (value === undefined || cel === undefined) return "bg-gray-300";
-  return value >= cel ? "bg-green-500" : "bg-red-500";
+  if (value === undefined || cel === undefined) {
+    return "bg-muted text-muted-foreground border-border";
+  }
+
+  return value >= cel
+    ? "bg-primary/10 text-primary border-primary/20"
+    : "bg-destructive/10 text-destructive border-destructive/20";
 };
 
 export function MachineDetailsCard({ dane }: MachineDetailsProps) {
   const toPct = (val?: number) => ((val ?? 0) * 100).toFixed(1);
+  const toMinutes = (val?: number) =>
+    val === undefined ? "-" : `${Math.round(val)} min`;
+
+  const kpis = [
+    {
+      key: "dostepnosc",
+      label: "Dostępność",
+      icon: Activity,
+      value: dane?.dostepnosc,
+      cel: dane?.dostepnosc_cel,
+      details: [
+        `Cel: ${toPct(dane?.dostepnosc_cel)}%`,
+        `Czas dostępny: ${dane?.czas_h ?? "-"}h ${dane?.czas_min ?? "-"}m`,
+        `Przezbrojenie: ${toMinutes(dane?.czas_przezbrojenia)}`,
+      ],
+    },
+    {
+      key: "wykorzystanie",
+      label: "Wykorzystanie",
+      icon: ArrowUp,
+      value: dane?.wykorzystanie,
+      cel: dane?.wykorzystanie_cel,
+      details: [
+        `Cel: ${toPct(dane?.wykorzystanie_cel)}%`,
+        `Czas wykonania: ${toMinutes(dane?.czas_wykonania)}`,
+        `Ilość przezbrojeń: ${dane?.iloscSztapli ?? "-"}`,
+      ],
+    },
+    {
+      key: "jakosc",
+      label: "Jakość",
+      icon: ArrowDown,
+      value: dane?.jakosc,
+      cel: dane?.jakosc_cel,
+      details: [
+        `Cel: ${toPct(dane?.jakosc_cel)}%`,
+        `Braki: ${dane?.braki ?? "-"}`,
+        `Wyprodukowane: ${dane?.iloscWyprodukowana ?? "-"}`,
+      ],
+    },
+  ];
 
   return (
-    <Card className="w-full max-w-5xl mx-auto my-6 shadow-lg border border-gray-200">
-      <CardHeader>
-        <CardTitle>Stan maszyny</CardTitle>
-        <CardDescription>Aktualne szczegóły produkcji</CardDescription>
+    <Card className="w-full mx-auto my-2 border-border shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Sparkles className="h-5 w-5" /> Holzma
+        </CardTitle>
+        <CardDescription>Aktualne szczegóły produkcji na zmianie</CardDescription>
       </CardHeader>
 
-      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Dostępność */}
-        <div className="p-4 border rounded-lg bg-white shadow-sm flex flex-col">
-          <div
-            className={`flex items-center justify-center p-2 rounded text-white font-bold mb-2 ${getStatusColor(
-              dane?.dostepnosc,
-              dane?.dostepnosc_cel,
-            )}`}
-          >
-            <Activity className="mr-2 w-5 h-5" /> Dostępność:{" "}
-            {toPct(dane?.dostepnosc)}%
-          </div>
-          <div className="text-sm space-y-1">
-            <div>Cel: {dane?.dostepnosc_cel ?? "-"}%</div>
-            <div>
-              Czas dostępny: {dane?.czas_h ?? "-"}H {dane?.czas_min ?? "-"}M
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {kpis.map((kpi) => {
+            const Icon = kpi.icon;
+
+            return (
+              <div key={kpi.key} className="rounded-xl border bg-card p-4 shadow-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Icon className="h-4 w-4" />
+                    {kpi.label}
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-xs font-semibold",
+                      getStatusColor(kpi.value, kpi.cel),
+                    )}
+                  >
+                    {toPct(kpi.value)}%
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  {kpi.details.map((detail) => (
+                    <p key={detail}>{detail}</p>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Wrench className="h-4 w-4" />
+              Awarie
             </div>
-            <div>
-              Czas na przezbrojenie:{" "}
-              {dane?.czas_przezbrojenia?.toFixed(1) ?? "-"} min
+            <span className="text-sm text-muted-foreground">{toMinutes(dane?.awarie)}</span>
+          </div>
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Settings className="h-4 w-4" />
+              Konserwacje
             </div>
-            <div>Ilość przezbrojeń: {dane?.iloscSztapli ?? "-"}</div>
+            <span className="text-sm text-muted-foreground">{toMinutes(dane?.konserwacje)}</span>
           </div>
-        </div>
-
-        {/* Wykorzystanie */}
-        <div className="p-4 border rounded-lg bg-white shadow-sm flex flex-col">
-          <div
-            className={`flex items-center justify-center p-2 rounded text-white font-bold mb-2 ${getStatusColor(
-              dane?.wykorzystanie,
-              dane?.wykorzystanie_cel,
-            )}`}
-          >
-            <ArrowUp className="mr-2 w-5 h-5" /> Wykorzystanie:{" "}
-            {toPct(dane?.wykorzystanie)}%
-          </div>
-          <div className="text-sm space-y-1">
-            <div>Cel: {dane?.wykorzystanie_cel ?? "-"}%</div>
-            <div>
-              Czas wykonania: {Math.round(dane?.czas_wykonania ?? 0)} min
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Pause className="h-4 w-4" />
+              Przerwa
             </div>
-            <div>Czas teoretyczny: {dane?.czas_wykonania ?? "-"} min</div>
+            <span className="text-sm text-muted-foreground">{toMinutes(dane?.przerwa)}</span>
           </div>
-        </div>
-
-        {/* Jakość */}
-        <div className="p-4 border rounded-lg bg-white shadow-sm flex flex-col">
-          <div
-            className={`flex items-center justify-center p-2 rounded text-white font-bold mb-2 ${getStatusColor(
-              dane?.jakosc,
-              dane?.jakosc_cel,
-            )}`}
-          >
-            <ArrowDown className="mr-2 w-5 h-5" /> Jakość: {toPct(dane?.jakosc)}
-            %
-          </div>
-          <div className="text-sm space-y-1">
-            <div>Cel: {dane?.jakosc_cel ?? "-"}%</div>
-            <div>Braki: {dane?.braki ?? "-"}</div>
-            <div>Wyprodukowana: {dane?.iloscWyprodukowana ?? "-"}</div>
-          </div>
-        </div>
-
-        {/* Awarie i konserwacje */}
-        <div className="col-span-1 md:col-span-3 flex gap-4">
-          <div className="flex-1 p-2 bg-red-600 text-white rounded flex items-center justify-center">
-            <Wrench className="mr-2 w-5 h-5" /> Awarie:{" "}
-            {dane?.awarie?.toFixed(1) ?? "-"} min
-          </div>
-          <div className="flex-1 p-2 bg-yellow-500 text-black rounded flex items-center justify-center">
-            <Settings className="mr-2 w-5 h-5" /> Konserwacje:{" "}
-            {dane?.konserwacje?.toFixed(1) ?? "-"} min
-          </div>
-        </div>
-
-        {/* Przerwy i sprzątanie */}
-        <div className="col-span-1 md:col-span-3 flex gap-4">
-          <div className="flex-1 p-2 bg-gray-200 text-black rounded flex items-center justify-center">
-            Przerwa: {dane?.przerwa ?? "-"} min
-          </div>
-          <div className="flex-1 p-2 bg-gray-300 text-black rounded flex items-center justify-center">
-            Sprzątanie: {dane?.sprzatanie ?? "-"} min
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Clock3 className="h-4 w-4" />
+              Sprzątanie
+            </div>
+            <span className="text-sm text-muted-foreground">{toMinutes(dane?.sprzatanie)}</span>
           </div>
         </div>
       </CardContent>
