@@ -11,16 +11,22 @@ import SheetDetails from "../MachineDetails/SheetDetails";
 import { useState } from "react";
 import AIChatPanel from "../Assistent AI/AssistentAI";
 import RaportDrawer from "../RaportForm/RaportDrawer";
+import { useQueryClient } from "@tanstack/react-query";
 
 type NavbarDBProps = {
   dane?: any;
-  onRefresh?: () => void;
+
 };
 
-export default function NavbarDB({ dane, onRefresh }: NavbarDBProps) {
+export default function NavbarDB({ dane }: NavbarDBProps) {
   const [aiOpen, setAiOpen] = useState(false);
+  const queryClient = useQueryClient();
   const machineName =
     dane?.nazwaMaszyny ?? dane?.nazwa_maszyny ?? dane?.maszyna ?? "Holzma";
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["historyMachineData"] });
+  };
 
   return (
     <>
@@ -32,7 +38,7 @@ export default function NavbarDB({ dane, onRefresh }: NavbarDBProps) {
             {/* Refresh */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" onClick={onRefresh}>
+                <Button size="icon" variant="ghost" onClick={handleRefresh}>
                   <RefreshCw className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>

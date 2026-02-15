@@ -17,6 +17,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import type { MachineData } from "@/types"
 
 export const description = "A simple area chart"
 
@@ -25,11 +26,18 @@ const chartConfig = {
     label: "Wydajność",
     color: "var(--chart-1)",
   },
+  awarie: {
+    label: "Awarie",
+    color: "var(--destructive)",
+  },
 } satisfies ChartConfig
 
-type WydajnoscPunkt = {
+type Punkt = {
   godzina: string
   wydajnosc: number
+  awarieMinuty: number
+  konserwacjeMinuty: number
+  minuteOfDay: number
 }
 
 const parseTimeToMinutes = (time: string) => {
@@ -42,15 +50,52 @@ const parseTimeToMinutes = (time: string) => {
   return hour * 60 + minute
 }
 
-export function ChartAreaDefault({ wydajnoscZmiana }: { wydajnoscZmiana: WydajnoscPunkt[] }) {
-  const currentUtilization = wydajnoscZmiana[wydajnoscZmiana.length - 1]?.wydajnosc ?? 0
+const toPercent = (value: number) => (value <= 1 ? value * 100 : value)
+
+const getAverageColor = (average: number) => {
+  if (average < 60) {
+    return "#ef4444"
+  }
+
+  if (average > 80) {
+    return "#22c55e"
+  }
+
+  return "#facc15"
+}
+
+const toPunkt = (point: MachineData): Punkt | null => {
+  const timestamp = point.data_aktualizacji
+  const [, time = ""] = timestamp.split(" ")
+  const [hour = "", minute = ""] = time.split(":")
+  const godzina = `${hour}:${minute}`
+  const minuteOfDay = parseTimeToMinutes(godzina)
+
+  if (minuteOfDay === null) {
+    return null
+  }
+
+  return {
+    godzina,
+    wydajnosc: toPercent(point.wykorzystanie),
+    awarieMinuty: point.awarie_minuty,
+    konserwacjeMinuty: point.konserwacje_minuty,
+    minuteOfDay,
+  }
+}
+
+
+export function ChartAreaDefault( {data}: {data?: MachineData[]} ) {
+  const wydajnoscZmiana = (data ?? [])
+    .map(toPunkt)
+    .filter((point): point is Punkt => point !== null)
+
+  const averageUtilization = wydajnoscZmiana.length
+    ? wydajnoscZmiana.reduce((sum, point) => sum + point.wydajnosc, 0) / wydajnoscZmiana.length
+    : 0
+  const chartColor = getAverageColor(averageUtilization)
 
   const pointsWithTime = wydajnoscZmiana
-    .map((point) => ({
-      ...point,
-      minuteOfDay: parseTimeToMinutes(point.godzina),
-    }))
-    .filter((point): point is WydajnoscPunkt & { minuteOfDay: number } => point.minuteOfDay !== null)
 
   const fallbackPoints = pointsWithTime.slice(-5)
   const lastMinute = pointsWithTime[pointsWithTime.length - 1]?.minuteOfDay
@@ -75,7 +120,7 @@ export function ChartAreaDefault({ wydajnoscZmiana }: { wydajnoscZmiana: Wydajno
   const isStableTrend = trendRange <= 5
   const isDowntrend = !isStableTrend && lastTrendValue < firstTrendValue
 
-  const trendColor = isStableTrend ? "#facc15" : isDowntrend ? "#ef4444" : "#22c55e"
+  const awariaCount = wydajnoscZmiana.filter((point) => point.awarieMinuty > 0).length
   const trendLabel = isStableTrend
     ? "Trend stabilny"
     : isDowntrend
@@ -95,7 +140,7 @@ export function ChartAreaDefault({ wydajnoscZmiana }: { wydajnoscZmiana: Wydajno
       
         <div className=" z-10 flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-sm font-semibold">
             <Gauge className="h-5 w-5" />
-            {currentUtilization.toFixed(1)}%
+            Śr. {averageUtilization.toFixed(1)}%
           </div>
       </CardHeader>
       <CardContent>
@@ -120,14 +165,51 @@ export function ChartAreaDefault({ wydajnoscZmiana }: { wydajnoscZmiana: Wydajno
               />
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent indicator="line" />}
+                content={
+                  <ChartTooltipContent
+                    indicator="line"
+                    labelFormatter={(_, payload) => {
+                      const point = payload?.[0]?.payload as Punkt | undefined
+
+                      if (!point) {
+                        return null
+                      }
+
+                      return point.awarieMinuty > 0
+                        ? `${point.godzina} • Awaria: ${point.awarieMinuty} min`
+                        : point.godzina
+                    }}
+                  />
+                }
               />
               <Area
                 dataKey="wydajnosc"
                 type="natural"
-                fill={trendColor}
+                fill={chartColor}
                 fillOpacity={0.4}
-                stroke={trendColor}
+                stroke={chartColor}
+                dot={({ cx, cy, payload }) => {
+                  if (typeof cx !== "number" || typeof cy !== "number") {
+                    return <g />
+                  }
+
+                  const point = payload as Punkt
+
+                  if (point.awarieMinuty > 0) {
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="var(--destructive)"
+                        stroke="var(--background)"
+                        strokeWidth={2}
+                      />
+                    )
+                  }
+
+                  return <circle cx={cx} cy={cy} r={2} fill={chartColor} />
+                }}
               />
             </AreaChart>
           </ChartContainer>
@@ -142,6 +224,11 @@ export function ChartAreaDefault({ wydajnoscZmiana }: { wydajnoscZmiana: Wydajno
             <div className="text-muted-foreground flex items-center gap-2 leading-none">
               Ocena trendu z ostatniej godziny (próg stabilności: 5%)
             </div>
+            {awariaCount > 0 && (
+              <div className="text-destructive flex items-center gap-2 leading-none">
+                Wykryto awarie: {awariaCount} punktów
+              </div>
+            )}
           </div>
         </div>
       </CardFooter>
